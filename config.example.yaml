@@ -1,8 +1,24 @@
+# デフォルトで使用するアカウント
+default_account: main
+
+# アカウント定義（config.yaml は .gitignore 対象なので認証情報を直接記入可）
+accounts:
+  main:
+    email:    main@example.com
+    username: main_user
+    password: mainpassword
+    cookies:  cookies_main.json
+
+  sub:
+    email:    sub@example.com
+    username: sub_user
+    password: subpassword
+    cookies:  cookies_sub.json
+
 tweet:
   text: "ツイート本文"
   media:
     - ./media1.png
-    - ./media2.png
 
 search:
   tweet:
@@ -15,14 +31,17 @@ trends:
   category: news    # trending / news / sports / entertainment
 
 schedules:
-  - text: "おはようございます！今日もよろしくお願いします。"
-    at: "09:00"          # 毎日 09:00 に投稿
+  - text: "メインアカウント: おはようございます！"
+    at: "09:00"
+    account: main    # 省略時は default_account を使用
 
-  - text: "おやすみなさい。今日もお疲れ様でした。"
-    at: "22:00"          # 毎日 22:00 に投稿
+  - text: "サブアカウント: おはようございます！"
+    at: "09:30"
+    account: sub
 
-  - text: "週次レポートです。今週もありがとうございました！"
-    every: monday        # 毎週月曜日に投稿
+  - text: "週次レポートです。"
+    every: monday
     at: "10:00"
+    account: main
     media:
       - ./weekly_report.png
