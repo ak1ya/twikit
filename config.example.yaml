@@ -16,7 +16,7 @@ accounts:
     cookies:  cookies_sub.json
 
 tweet:
-  text: "ツイート本文"
+  text: "{{date}} のツイート本文"  # {{date}} {{time}} {{year}} {{month}} {{day}} {{weekday}} が使用可能
   media:
     - ./media1.png
 
@@ -31,15 +31,15 @@ trends:
   category: news    # trending / news / sports / entertainment
 
 schedules:
-  - text: "メインアカウント: おはようございます！"
+  - text: "{{date}} {{weekday}}、おはようございます！"
     at: "09:00"
     account: main    # 省略時は default_account を使用
 
-  - text: "サブアカウント: おはようございます！"
+  - text: "{{month}}月{{day}}日 {{time}} のサブ投稿です。"
     at: "09:30"
     account: sub
 
-  - text: "週次レポートです。"
+  - text: "今週（{{date}}）もありがとうございました！"
     every: monday
     at: "10:00"
     account: main
