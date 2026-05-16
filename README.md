@@ -3,7 +3,7 @@
 
 ## 導入
 1. インストール
-  - `$ pip install twikit python-dotenv pyyaml`
+  - `$ pip install twikit python-dotenv pyyaml schedule`
 2. Twitter(X)アカウントの作成
   - [こちら](https://twitter.com/i/flow/signup)にアクセスして、Twitterアカウントを作成しましょう
 3. 認証情報の設定
@@ -41,7 +41,33 @@ python twikit.py search-user "検索クエリ"
 # トレンドを取得する
 python twikit.py trends
 python twikit.py trends --category sports
+
+# スケジューラーを起動する（Ctrl+C で停止）
+python twikit.py schedule
 ```
+
+## スケジュール設定
+
+`config.yaml` の `schedules` セクションで自動ツイートのスケジュールを定義できます。
+
+```yaml
+schedules:
+  - text: "おはようございます！"
+    at: "09:00"          # 毎日この時刻に投稿
+
+  - text: "週次レポートです。"
+    every: monday        # 毎週月曜日に投稿
+    at: "10:00"
+    media:
+      - ./report.png
+```
+
+| フィールド | 必須 | 説明 |
+|---|---|---|
+| `text` | ○ | ツイート本文 |
+| `at` | ○ | 投稿時刻（HH:MM形式） |
+| `every` | - | 曜日指定（monday〜sunday）。省略時は毎日 |
+| `media` | - | 添付メディアのパス |
 
 ## ログイン
 初回実行時に `.env` の認証情報でログインし、`cookies.json` にクッキーを保存します。

@@ -13,3 +13,16 @@ search:
 
 trends:
   category: news    # trending / news / sports / entertainment
+
+schedules:
+  - text: "おはようございます！今日もよろしくお願いします。"
+    at: "09:00"          # 毎日 09:00 に投稿
+
+  - text: "おやすみなさい。今日もお疲れ様でした。"
+    at: "22:00"          # 毎日 22:00 に投稿
+
+  - text: "週次レポートです。今週もありがとうございました！"
+    every: monday        # 毎週月曜日に投稿
+    at: "10:00"
+    media:
+      - ./weekly_report.png

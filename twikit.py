@@ -1,7 +1,10 @@
 import argparse
 import asyncio
 import os
+import time
+import schedule
 import yaml
+from datetime import datetime
 from dotenv import load_dotenv
 from twikit import Client
 
@@ -30,6 +33,15 @@ async def login():
         client.save_cookies('cookies.json')
 
 
+async def post_tweet(text, media_paths=None):
+    media_ids = []
+    for path in (media_paths or []):
+        media_id = await client.upload_media(path)
+        media_ids.append(media_id)
+    await client.create_tweet(text, media_ids=media_ids or None)
+    print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] ツイートしました: {text[:30]}...' if len(text) > 30 else f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] ツイートしました: {text}')
+
+
 async def cmd_tweet(args, config):
     text = args.text or config.get('tweet', {}).get('text')
     media_paths = args.media or config.get('tweet', {}).get('media', [])
@@ -38,13 +50,7 @@ async def cmd_tweet(args, config):
         print('エラー: ツイート本文を指定してください（引数 or config.yaml の tweet.text）')
         return
 
-    media_ids = []
-    for path in media_paths:
-        media_id = await client.upload_media(path)
-        media_ids.append(media_id)
-
-    await client.create_tweet(text, media_ids=media_ids or None)
-    print('ツイートしました')
+    await post_tweet(text, media_paths)
 
 
 async def cmd_search_tweet(args, config):
@@ -79,6 +85,60 @@ async def cmd_trends(args, config):
         print(trend.name)
 
 
+def register_schedules(schedules_config):
+    DAYS = {
+        'monday': schedule.every().monday,
+        'tuesday': schedule.every().tuesday,
+        'wednesday': schedule.every().wednesday,
+        'thursday': schedule.every().thursday,
+        'friday': schedule.every().friday,
+        'saturday': schedule.every().saturday,
+        'sunday': schedule.every().sunday,
+    }
+
+    for entry in schedules_config:
+        text = entry.get('text')
+        media_paths = entry.get('media', [])
+        at_time = entry.get('at')
+        every_day = entry.get('every')
+
+        if not text or not at_time:
+            print(f'警告: スケジュールに text と at は必須です。スキップします: {entry}')
+            continue
+
+        def make_job(t, m):
+            def job():
+                asyncio.run(post_tweet(t, m))
+            return job
+
+        job_fn = make_job(text, media_paths)
+
+        if every_day and every_day.lower() in DAYS:
+            DAYS[every_day.lower()].at(at_time).do(job_fn)
+            print(f'スケジュール登録: 毎週{every_day} {at_time} → "{text[:20]}"')
+        else:
+            schedule.every().day.at(at_time).do(job_fn)
+            print(f'スケジュール登録: 毎日 {at_time} → "{text[:20]}"')
+
+
+async def cmd_schedule(args, config):
+    schedules_config = config.get('schedules', [])
+
+    if not schedules_config:
+        print('エラー: config.yaml に schedules の設定がありません')
+        return
+
+    register_schedules(schedules_config)
+    print('スケジューラーを起動しました。Ctrl+C で停止します。')
+
+    try:
+        while True:
+            schedule.run_pending()
+            time.sleep(30)
+    except KeyboardInterrupt:
+        print('スケジューラーを停止しました')
+
+
 async def main():
     config = load_config()
 
@@ -103,6 +163,9 @@ async def main():
     p_trends = subparsers.add_parser('trends', help='トレンドを取得する')
     p_trends.add_argument('--category', default=None, choices=['trending', 'news', 'sports', 'entertainment'], help='カテゴリ（デフォルト: news）')
 
+    # schedule サブコマンド
+    subparsers.add_parser('schedule', help='config.yaml のスケジュールに従って自動ツイートする')
+
     args = parser.parse_args()
 
     await login()
@@ -112,6 +175,7 @@ async def main():
         'search-tweet': cmd_search_tweet,
         'search-user': cmd_search_user,
         'trends': cmd_trends,
+        'schedule': cmd_schedule,
     }
     await commands[args.command](args, config)
 
