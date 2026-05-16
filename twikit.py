@@ -1,5 +1,9 @@
 import asyncio
+import os
+from dotenv import load_dotenv
 from twikit import Client
+
+load_dotenv()
 
 client = Client('ja')
 
@@ -9,9 +13,9 @@ async def main():
         client.load_cookies('cookies.json')
     except FileNotFoundError:
         await client.login(
-            auth_info_1='email@example.com',
-            auth_info_2='example_user',
-            password='password0000'
+            auth_info_1=os.environ['TWITTER_EMAIL'],
+            auth_info_2=os.environ['TWITTER_USERNAME'],
+            password=os.environ['TWITTER_PASSWORD'],
         )
         client.save_cookies('cookies.json')
 

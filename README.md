@@ -3,9 +3,14 @@
 
 ## 導入
 1. インストール
-  - `$ pip install twikit`
+  - `$ pip install twikit python-dotenv`
 2. Twitter(X)アカウントの作成
   - [こちら](https://twitter.com/i/flow/signup)にアクセスして、Twitterアカウントを作成しましょう
+3. 認証情報の設定
+  - `.env.example` をコピーして `.env` を作成し、自分のアカウント情報を記入
+  ```
+  cp .env.example .env
+  ```
 
 ## ログイン
 - ツイートのたびにログインするため以下で回避
