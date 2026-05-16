@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import os
 import re
 import time
@@ -81,6 +82,20 @@ _TEMPLATE_VARS = {
 }
 
 
+def write_log(log_path, account, text, media_paths, status, error=None):
+    entry = {
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'account':   account,
+        'text':      text,
+        'media':     media_paths or [],
+        'status':    status,
+    }
+    if error:
+        entry['error'] = error
+    with open(log_path, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+
+
 def render_template(text):
     """{{variable}} 形式のテンプレート変数を現在時刻で展開する。"""
     now = datetime.now()
@@ -92,16 +107,22 @@ def render_template(text):
     return re.sub(r'\{\{(.+?)\}\}', replace, text)
 
 
-async def post_tweet(client, text, media_paths=None):
+async def post_tweet(client, text, account='unknown', media_paths=None, log_path='tweet.log'):
     text = render_template(text)
-    media_ids = []
-    for path in (media_paths or []):
-        media_id = await client.upload_media(path)
-        media_ids.append(media_id)
-    await client.create_tweet(text, media_ids=media_ids or None)
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     preview = text[:30] + '...' if len(text) > 30 else text
-    print(f'[{ts}] ツイートしました: {preview}')
+    try:
+        media_ids = []
+        for path in (media_paths or []):
+            media_id = await client.upload_media(path)
+            media_ids.append(media_id)
+        await client.create_tweet(text, media_ids=media_ids or None)
+        write_log(log_path, account, text, media_paths, 'success')
+        print(f'[{ts}] ツイートしました [{account}]: {preview}')
+    except Exception as e:
+        write_log(log_path, account, text, media_paths, 'error', error=str(e))
+        print(f'[{ts}] エラー [{account}]: {e}')
+        raise
 
 
 async def cmd_tweet(args, config):
@@ -112,9 +133,10 @@ async def cmd_tweet(args, config):
         print('エラー: ツイート本文を指定してください（引数 or config.yaml の tweet.text）')
         return
 
-    account = args.account or _default_account(config)
-    client = await get_client(account, config)
-    await post_tweet(client, text, media_paths)
+    account  = args.account or _default_account(config)
+    log_path = config.get('log', {}).get('path', 'tweet.log')
+    client   = await get_client(account, config)
+    await post_tweet(client, text, account=account, media_paths=media_paths, log_path=log_path)
 
 
 async def cmd_search_tweet(args, config):
@@ -178,10 +200,11 @@ def register_schedules(schedules_config, config):
             continue
 
         def make_job(t, m, a):
+            log_path = config.get('log', {}).get('path', 'tweet.log')
             def job():
                 async def _run():
                     c = await get_client(a, config)
-                    await post_tweet(c, t, m)
+                    await post_tweet(c, t, account=a, media_paths=m, log_path=log_path)
                 asyncio.run(_run())
             return job
 
@@ -211,6 +234,32 @@ async def cmd_schedule(args, config):
             time.sleep(30)
     except KeyboardInterrupt:
         print('スケジューラーを停止しました')
+
+
+async def cmd_logs(args, config):
+    log_path = config.get('log', {}).get('path', 'tweet.log')
+
+    try:
+        with open(log_path, encoding='utf-8') as f:
+            entries = [json.loads(line) for line in f if line.strip()]
+    except FileNotFoundError:
+        print(f'ログファイルがまだ存在しません: {log_path}')
+        return
+
+    if args.account:
+        entries = [e for e in entries if e.get('account') == args.account]
+
+    entries = entries[-args.tail:]
+
+    for e in entries:
+        status  = '✓' if e['status'] == 'success' else '✗'
+        preview = e['text'][:40] + '...' if len(e['text']) > 40 else e['text']
+        line    = f"[{e['timestamp']}] {status} [{e['account']}] {preview}"
+        if e['status'] == 'error':
+            line += f" ERROR: {e.get('error', '')}"
+        print(line)
+
+    print(f'\n合計 {len(entries)} 件')
 
 
 async def cmd_accounts(args, config):
@@ -253,6 +302,11 @@ async def main():
     # schedule
     subparsers.add_parser('schedule', help='config.yaml のスケジュールに従って自動ツイートする')
 
+    # logs
+    p_logs = subparsers.add_parser('logs', help='投稿ログを表示する')
+    p_logs.add_argument('--tail', type=int, default=20, metavar='N', help='表示する最新件数（デフォルト: 20）')
+    p_logs.add_argument('--account', default=None, metavar='NAME', help='アカウントでフィルタ')
+
     # accounts
     subparsers.add_parser('accounts', help='登録済みアカウントの一覧を表示する')
 
@@ -264,6 +318,7 @@ async def main():
         'search-user':  cmd_search_user,
         'trends':       cmd_trends,
         'schedule':     cmd_schedule,
+        'logs':         cmd_logs,
         'accounts':     cmd_accounts,
     }
     await commands[args.command](args, config)

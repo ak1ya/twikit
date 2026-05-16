@@ -40,6 +40,11 @@ python twikit.py trends --category sports
 # スケジューラーを起動する（Ctrl+C で停止）
 python twikit.py schedule
 
+# 投稿ログを表示する（最新20件）
+python twikit.py logs
+python twikit.py logs --tail 50
+python twikit.py logs --account main
+
 # 登録済みアカウントの一覧を表示する
 python twikit.py accounts
 ```
@@ -94,6 +99,22 @@ schedules:
 | `every` | - | 曜日指定（monday〜sunday）。省略時は毎日 |
 | `account` | - | 使用するアカウント名。省略時は `default_account` |
 | `media` | - | 添付メディアのパス |
+
+## 投稿ログ
+
+ツイートのたびに `tweet.log`（JSONL形式）に自動記録されます。成功・失敗どちらも残ります。
+
+```
+[2026-05-17 09:00:00] ✓ [main] 2026-05-17 日曜日、おはようございます！
+[2026-05-17 09:01:00] ✗ [sub] エラーのツイート ERROR: Connection timeout
+```
+
+ログの保存先は `config.yaml` で変更可能です。
+
+```yaml
+log:
+  path: tweet.log
+```
 
 ## テンプレート変数
 

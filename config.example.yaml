@@ -30,6 +30,9 @@ search:
 trends:
   category: news    # trending / news / sports / entertainment
 
+log:
+  path: tweet.log   # 投稿ログの保存先
+
 schedules:
   - text: "{{date}} {{weekday}}、おはようございます！"
     at: "09:00"
