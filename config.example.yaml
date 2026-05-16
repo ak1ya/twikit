@@ -1,0 +1,15 @@
+tweet:
+  text: "ツイート本文"
+  media:
+    - ./media1.png
+    - ./media2.png
+
+search:
+  tweet:
+    query: "検索クエリ"
+    type: Top        # Top / Latest / Media
+  user:
+    query: "検索クエリ"
+
+trends:
+  category: news    # trending / news / sports / entertainment
